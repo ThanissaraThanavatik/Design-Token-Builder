@@ -1,76 +1,52 @@
 import { hexToRgb } from '@/lib/utils';
 
-const SCALE_CONFIG = [
-  { step: '50',  toward: 'white' as const, factor: 0.94 },
-  { step: '100', toward: 'white' as const, factor: 0.84 },
-  { step: '200', toward: 'white' as const, factor: 0.70 },
-  { step: '300', toward: 'white' as const, factor: 0.52 },
-  { step: '400', toward: 'white' as const, factor: 0.33 },
-  { step: '500', toward: 'base'  as const, factor: 0    },
-  { step: '600', toward: 'black' as const, factor: 0.18 },
-  { step: '700', toward: 'black' as const, factor: 0.36 },
-  { step: '800', toward: 'black' as const, factor: 0.54 },
-  { step: '900', toward: 'black' as const, factor: 0.70 },
-  { step: '950', toward: 'black' as const, factor: 0.80 },
+type Rgb = { r: number; g: number; b: number };
+
+// Linear sRGB mix: pct is the weight of c2 (0–100), same as tinycolor.mix
+function mixRgb(c1: Rgb, c2: Rgb, pct: number): Rgb {
+  const w = pct / 100;
+  return {
+    r: Math.round(c1.r * (1 - w) + c2.r * w),
+    g: Math.round(c1.g * (1 - w) + c2.g * w),
+    b: Math.round(c1.b * (1 - w) + c2.b * w),
+  };
+}
+
+function rgbToHex({ r, g, b }: Rgb): string {
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+const WHITE: Rgb = { r: 255, g: 255, b: 255 };
+const BLACK: Rgb = { r: 0,   g: 0,   b: 0   };
+
+// Percentages reverse-engineered from Foundation: Color Generator (Material profile)
+// Light steps: mix(WHITE, base, pct%) — verified bit-perfect against plugin output
+const LIGHT_STEPS = [
+  { step: '50',  pct: 10  },
+  { step: '100', pct: 31  },
+  { step: '200', pct: 46  },
+  { step: '300', pct: 67  },
+  { step: '400', pct: 80  },
+  { step: '500', pct: 100 },
 ];
 
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  const rn = r / 255, gn = g / 255, bn = b / 255;
-  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
-  const l = (max + min) / 2;
-  if (max === min) return [0, 0, l * 100];
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h = 0;
-  if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
-  else if (max === gn) h = ((bn - rn) / d + 2) / 6;
-  else h = ((rn - gn) / d + 4) / 6;
-  return [h * 360, s * 100, l * 100];
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  const hn = h / 360, sn = s / 100, ln = l / 100;
-  let r: number, g: number, b: number;
-  if (sn === 0) {
-    r = g = b = ln;
-  } else {
-    const hue2rgb = (p: number, q: number, t: number) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-      return p;
-    };
-    const q = ln < 0.5 ? ln * (1 + sn) : ln + sn - ln * sn;
-    const p = 2 * ln - q;
-    r = hue2rgb(p, q, hn + 1/3);
-    g = hue2rgb(p, q, hn);
-    b = hue2rgb(p, q, hn - 1/3);
-  }
-  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
+// Dark steps: mix(BLACK, base, pct%) — verified bit-perfect against plugin output
+// 950 extrapolated by continuing the decay curve
+const DARK_STEPS = [
+  { step: '600', pct: 91 },
+  { step: '700', pct: 71 },
+  { step: '800', pct: 55 },
+  { step: '900', pct: 42 },
+  { step: '950', pct: 32 },
+];
 
 export function generateColorScale(baseHex: string): Array<{ step: string; hex: string }> {
-  const rgb = hexToRgb(baseHex);
-  if (!rgb) return [];
-  const [h, s, l] = rgbToHsl(rgb.r, rgb.g, rgb.b);
-
-  return SCALE_CONFIG.map(({ step, toward, factor }) => {
-    let newL: number, newS: number;
-    if (toward === 'base') {
-      newL = l;
-      newS = s;
-    } else if (toward === 'white') {
-      newL = l + (97 - l) * factor;
-      newS = s * (1 - factor * 0.25);
-    } else {
-      newL = l * (1 - factor);
-      newS = s;
-    }
-    return { step, hex: hslToHex(h, Math.max(0, Math.min(100, newS)), Math.max(0, Math.min(100, newL))) };
-  });
+  const base = hexToRgb(baseHex);
+  if (!base) return [];
+  return [
+    ...LIGHT_STEPS.map(({ step, pct }) => ({ step, hex: rgbToHex(mixRgb(WHITE, base, pct)) })),
+    ...DARK_STEPS.map(({ step, pct }) => ({ step, hex: rgbToHex(mixRgb(BLACK, base, pct)) })),
+  ];
 }
 
 function relativeLuminance(hex: string): number {
