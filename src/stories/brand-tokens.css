@@ -1,0 +1,13 @@
+/*
+  Brand Tokens for Storybook
+  ──────────────────────────────────────────────────────────────
+  Export your brand from Design Token Builder:
+    Export → CSS (Tailwind 4.0) → Copy → paste below
+
+  After updating, Storybook hot-reloads automatically.
+  ──────────────────────────────────────────────────────────────
+*/
+
+@theme {
+  /* Paste exported @theme block here */
+}
