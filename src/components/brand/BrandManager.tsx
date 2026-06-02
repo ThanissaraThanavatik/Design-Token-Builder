@@ -5,9 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBrandStore } from '@/store/brandStore';
-import { generateId } from '@/lib/utils';
+import { generateId, cn } from '@/lib/utils';
 import { exportBrandJSON, parseBrandJSON } from '@/lib/storage';
 import { generateColorScale } from '@/lib/color-generator';
+import type { PlatformType } from '@/types/brand';
+import {
+  PLATFORM_LABELS,
+  PLATFORM_ICONS,
+  makeDefaultPlatform,
+} from '@/data/platform-defaults';
 
 interface BrandManagerProps {
   open: boolean;
@@ -24,12 +30,22 @@ function isValidHex(hex: string): boolean {
 
 const PREVIEW_STEPS = ['50', '200', '500', '700', '950'];
 
+const ALL_PLATFORM_TYPES: PlatformType[] = [
+  'website',
+  'web-app',
+  'mobile-app',
+  'line-oa',
+  'dashboard',
+  'other',
+];
+
 export function BrandManager({ open, onClose }: BrandManagerProps) {
   const {
     brands, activeBrandId,
     duplicateBrand, deleteBrand, setActiveBrand, importBrand,
     updateBrandMeta, updateBrandCollections,
     setPrimaryColorShade, setSecondaryColorShade,
+    addBrandPlatform,
   } = useBrandStore();
 
   const [newBrandName, setNewBrandName] = useState('');
@@ -37,6 +53,8 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
   const [hasSecondary, setHasSecondary] = useState(false);
   const [secondaryHex, setSecondaryHex] = useState('#03dac6');
   const [mode, setMode] = useState<'list' | 'create'>('list');
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformType[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -48,6 +66,14 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
     setPrimaryHex('#6200ee');
     setHasSecondary(false);
     setSecondaryHex('#03dac6');
+    setStep(1);
+    setSelectedPlatforms([]);
+  }
+
+  function togglePlatform(type: PlatformType) {
+    setSelectedPlatforms((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    );
   }
 
   function startRename(brand: { id: string; name: string }) {
@@ -111,6 +137,14 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
         ));
       }
     }
+
+    // Apply selected platform defaults
+    selectedPlatforms.forEach((type) => {
+      addBrandPlatform(id, {
+        id: Math.random().toString(36).slice(2),
+        ...makeDefaultPlatform(type),
+      });
+    });
 
     setActiveBrand(id);
     setPrimaryColorShade(id, '500');
@@ -254,112 +288,177 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Brand Name */}
-            <div className="space-y-1.5">
-              <Label htmlFor="brand-name">Brand Name</Label>
-              <Input
-                id="brand-name"
-                autoFocus
-                value={newBrandName}
-                onChange={(e) => setNewBrandName(e.target.value)}
-                placeholder="My Brand"
-                onKeyDown={(e) => e.key === 'Enter' && newBrandName.trim() && isValidHex(primaryHex) && handleCreate()}
-              />
+            {/* Step progress bar */}
+            <div className="flex items-center gap-1.5">
+              <div className="h-1 flex-1 rounded-full bg-primary" />
+              <div className={cn('h-1 flex-1 rounded-full transition-colors', step === 2 ? 'bg-primary' : 'bg-muted')} />
+              <span className="text-[10px] text-muted-foreground ml-1">Step {step} of 2</span>
             </div>
 
-            {/* Primary Color */}
-            <div className="space-y-1.5">
-              <Label>
-                Primary Color <span className="text-destructive text-xs">required</span>
-              </Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={isValidHex(primaryHex) ? primaryHex : '#6200ee'}
-                  onChange={(e) => setPrimaryHex(e.target.value)}
-                  className="h-8 w-8 rounded border border-border cursor-pointer p-0.5 bg-transparent shrink-0"
-                />
-                <Input
-                  value={primaryHex}
-                  onChange={(e) => {
-                    const v = e.target.value.startsWith('#') ? e.target.value : `#${e.target.value}`;
-                    if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setPrimaryHex(v);
-                  }}
-                  placeholder="#6200ee"
-                  className="flex-1 h-8 font-mono text-sm"
-                />
-              </div>
-              <div className="flex gap-1">
-                {PREVIEW_STEPS.map((step) => {
-                  const entry = primaryScale.find((s) => s.step === step);
-                  return (
-                    <div key={step} className="flex-1 space-y-0.5">
-                      <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} title={`${step}: ${entry?.hex}`} />
-                      <p className="text-[9px] text-muted-foreground text-center">{step}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {step === 1 ? (
+              <>
+                {/* Brand Name */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="brand-name">Brand Name</Label>
+                  <Input
+                    id="brand-name"
+                    autoFocus
+                    value={newBrandName}
+                    onChange={(e) => setNewBrandName(e.target.value)}
+                    placeholder="My Brand"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newBrandName.trim() && isValidHex(primaryHex)) setStep(2);
+                    }}
+                  />
+                </div>
 
-            {/* Secondary Color (optional) */}
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={hasSecondary}
-                  onChange={(e) => setHasSecondary(e.target.checked)}
-                  className="rounded"
-                />
-                Add Secondary Color <span className="text-xs text-muted-foreground">(optional)</span>
-              </label>
-              {hasSecondary && (
-                <>
+                {/* Primary Color */}
+                <div className="space-y-1.5">
+                  <Label>
+                    Primary Color <span className="text-destructive text-xs">required</span>
+                  </Label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
-                      value={isValidHex(secondaryHex) ? secondaryHex : '#03dac6'}
-                      onChange={(e) => setSecondaryHex(e.target.value)}
+                      value={isValidHex(primaryHex) ? primaryHex : '#6200ee'}
+                      onChange={(e) => setPrimaryHex(e.target.value)}
                       className="h-8 w-8 rounded border border-border cursor-pointer p-0.5 bg-transparent shrink-0"
                     />
                     <Input
-                      value={secondaryHex}
+                      value={primaryHex}
                       onChange={(e) => {
                         const v = e.target.value.startsWith('#') ? e.target.value : `#${e.target.value}`;
-                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setSecondaryHex(v);
+                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setPrimaryHex(v);
                       }}
-                      placeholder="#03dac6"
+                      placeholder="#6200ee"
                       className="flex-1 h-8 font-mono text-sm"
                     />
                   </div>
                   <div className="flex gap-1">
-                    {PREVIEW_STEPS.map((step) => {
-                      const entry = secondaryScale.find((s) => s.step === step);
+                    {PREVIEW_STEPS.map((s) => {
+                      const entry = primaryScale.find((e) => e.step === s);
                       return (
-                        <div key={step} className="flex-1 space-y-0.5">
-                          <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} title={`${step}: ${entry?.hex}`} />
-                          <p className="text-[9px] text-muted-foreground text-center">{step}</p>
+                        <div key={s} className="flex-1 space-y-0.5">
+                          <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} title={`${s}: ${entry?.hex}`} />
+                          <p className="text-[9px] text-muted-foreground text-center">{s}</p>
                         </div>
                       );
                     })}
                   </div>
-                </>
-              )}
-            </div>
+                </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" onClick={() => { resetCreateForm(); setMode('list'); }} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                className="flex-1"
-                disabled={!newBrandName.trim() || !isValidHex(primaryHex)}
-              >
-                Create Brand
-              </Button>
-            </div>
+                {/* Secondary Color (optional) */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasSecondary}
+                      onChange={(e) => setHasSecondary(e.target.checked)}
+                      className="rounded"
+                    />
+                    Add Secondary Color <span className="text-xs text-muted-foreground">(optional)</span>
+                  </label>
+                  {hasSecondary && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={isValidHex(secondaryHex) ? secondaryHex : '#03dac6'}
+                          onChange={(e) => setSecondaryHex(e.target.value)}
+                          className="h-8 w-8 rounded border border-border cursor-pointer p-0.5 bg-transparent shrink-0"
+                        />
+                        <Input
+                          value={secondaryHex}
+                          onChange={(e) => {
+                            const v = e.target.value.startsWith('#') ? e.target.value : `#${e.target.value}`;
+                            if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setSecondaryHex(v);
+                          }}
+                          placeholder="#03dac6"
+                          className="flex-1 h-8 font-mono text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        {PREVIEW_STEPS.map((s) => {
+                          const entry = secondaryScale.find((e) => e.step === s);
+                          return (
+                            <div key={s} className="flex-1 space-y-0.5">
+                              <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} title={`${s}: ${entry?.hex}`} />
+                              <p className="text-[9px] text-muted-foreground text-center">{s}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Step 1 actions */}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    onClick={() => { resetCreateForm(); setMode('list'); }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setStep(2)}
+                    className="flex-1"
+                    disabled={!newBrandName.trim() || !isValidHex(primaryHex)}
+                  >
+                    Next: Platform →
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Platform & Screens */}
+                <div className="space-y-2">
+                  <div>
+                    <Label>Platform & Screens</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Select the platforms you're designing for. Breakpoints load with recommended defaults — you can adjust them in Brand Docs.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {ALL_PLATFORM_TYPES.map((type) => {
+                      const selected = selectedPlatforms.includes(type);
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => togglePlatform(type)}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-medium transition-colors',
+                            selected
+                              ? 'bg-primary/10 border-primary/30 text-primary'
+                              : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                          )}
+                        >
+                          <span>{PLATFORM_ICONS[type]}</span>
+                          <span>{PLATFORM_LABELS[type]}</span>
+                          {selected && <Check className="size-3" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedPlatforms.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      You can skip this and add platforms later in Brand Docs.
+                    </p>
+                  )}
+                </div>
+
+                {/* Step 2 actions */}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                    ← Back
+                  </Button>
+                  <Button onClick={handleCreate} className="flex-1">
+                    Create Brand
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </DialogContent>

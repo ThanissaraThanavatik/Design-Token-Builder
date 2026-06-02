@@ -113,7 +113,7 @@ export function ColorGeneratorDialog({ open, onClose, collection, initialGroupNa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-background border border-border rounded-xl shadow-2xl w-[520px] max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-background border border-border rounded-xl shadow-2xl w-[760px] max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
@@ -169,7 +169,22 @@ export function ColorGeneratorDialog({ open, onClose, collection, initialGroupNa
               className="h-7 text-xs font-mono w-28"
               spellCheck={false}
             />
-            <span className="text-xs text-muted-foreground ml-auto">vs ⬛ &nbsp;&nbsp; vs ⬜</span>
+          </div>
+        </div>
+
+        {/* Column headers */}
+        <div className="flex items-center border-b border-border shrink-0 bg-muted/40 select-none">
+          <div className="w-36 shrink-0 px-3 py-1.5">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Token</span>
+          </div>
+          <div className="flex-1 px-3 py-1.5">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Swatch / Hex</span>
+          </div>
+          <div className="w-28 shrink-0 px-3 py-1.5 border-l border-border/40 text-right">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">vs Black ⬛</span>
+          </div>
+          <div className="w-28 shrink-0 px-3 py-1.5 border-l border-border/40 text-right">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">vs White ⬜</span>
           </div>
         </div>
 
@@ -183,35 +198,35 @@ export function ColorGeneratorDialog({ open, onClose, collection, initialGroupNa
             return (
               <div key={step} className={`flex items-stretch border-b border-border/50 last:border-0 ${isBase ? 'ring-inset ring-1 ring-primary/40' : ''}`}>
                 {/* Step label */}
-                <div className="w-20 shrink-0 flex items-center px-3 py-1">
-                  <span className={`text-xs font-mono ${isBase ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+                <div className="w-36 shrink-0 flex items-center px-3 py-1.5">
+                  <span className={`text-xs font-mono leading-tight ${isBase ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
                     {groupName.toLowerCase() || 'color'}-{step}
                   </span>
                 </div>
 
                 {/* Swatch */}
                 <div
-                  className="flex-1 flex items-center px-3"
-                  style={{ backgroundColor: hex, minHeight: '40px' }}
+                  className="flex-1 flex items-center gap-2 px-3"
+                  style={{ backgroundColor: hex, minHeight: '44px' }}
                 >
-                  <span className="text-[11px] font-mono" style={{ color: fg }}>
+                  <span className="text-xs font-mono font-medium" style={{ color: fg }}>
                     {hex.toUpperCase()}
                   </span>
                   {isBase && (
-                    <span className="ml-2 text-[10px] font-semibold opacity-70" style={{ color: fg }}>base</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded opacity-80" style={{ color: fg, border: `1px solid ${fg}40` }}>base</span>
                   )}
                 </div>
 
                 {/* Contrast vs black */}
-                <div className="w-20 shrink-0 flex items-center justify-end gap-1 px-2 border-l border-border/30">
+                <div className="w-28 shrink-0 flex items-center justify-end gap-1.5 px-3 border-l border-border/30">
                   <WcagBadge ratio={vsBlack} />
-                  <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">{vsBlack.toFixed(1)}</span>
+                  <span className="text-xs font-mono tabular-nums text-muted-foreground">{vsBlack.toFixed(2)}</span>
                 </div>
 
                 {/* Contrast vs white */}
-                <div className="w-20 shrink-0 flex items-center justify-end gap-1 px-2 border-l border-border/30">
+                <div className="w-28 shrink-0 flex items-center justify-end gap-1.5 px-3 border-l border-border/30">
                   <WcagBadge ratio={vsWhite} />
-                  <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">{vsWhite.toFixed(1)}</span>
+                  <span className="text-xs font-mono tabular-nums text-muted-foreground">{vsWhite.toFixed(2)}</span>
                 </div>
               </div>
             );
@@ -221,7 +236,7 @@ export function ColorGeneratorDialog({ open, onClose, collection, initialGroupNa
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0 bg-muted/20">
           <p className="text-[10px] text-muted-foreground">
-            {scale.length} shades · contrast vs ⬛ and vs ⬜
+            {scale.length} shades · WCAG contrast ratio vs black and white
           </p>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onClose}>

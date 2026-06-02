@@ -4,6 +4,7 @@ import type { Brand, GoogleFont, BrandCustomIcon, BrandPlatform, ScreenBreakpoin
 import type { Collection } from '@/types/token';
 import { initialBrands } from '@/data/brands';
 import { iconSizesCollection, iconColorsCollection } from '@/data';
+import { LUCIDE_DEFAULT_ICONS } from '@/data/lucide-default-icons';
 
 const SCALE_STEPS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
 
@@ -332,7 +333,7 @@ export const useBrandStore = create<BrandStore>()(
     }),
     {
       name: 'dtb-v3',
-      version: 7,
+      version: 8,
       migrate: (state: unknown, version: number) => {
         const s = state as { brands: Brand[]; activeBrandId: string; schemaVersion: number; orgFonts: GoogleFont[] };
         if (version < 4) {
@@ -488,6 +489,24 @@ export const useBrandStore = create<BrandStore>()(
             });
 
             return { ...brand, secondaryColorShade: '500', collections: updatedCollections };
+          });
+        }
+        if (version < 8) {
+          s.brands = s.brands.map((brand) => {
+            const existingLucide = brand.icons?.approvedIcons?.find(
+              (a) => a.library === 'Lucide Icons',
+            );
+            if (existingLucide?.names?.length) return brand;
+            const otherApproved = brand.icons?.approvedIcons?.filter(
+              (a) => a.library !== 'Lucide Icons',
+            ) ?? [];
+            return {
+              ...brand,
+              icons: {
+                ...brand.icons,
+                approvedIcons: [...otherApproved, { library: 'Lucide Icons', names: LUCIDE_DEFAULT_ICONS }],
+              },
+            };
           });
         }
         return s;

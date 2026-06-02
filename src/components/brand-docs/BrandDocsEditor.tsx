@@ -14,14 +14,15 @@ import { FontLibraryManager } from './FontLibraryManager';
 import { LogoUploader } from './LogoUploader';
 import { IconLibraryEditor } from './IconLibraryEditor';
 import { PlatformsEditor } from './PlatformsEditor';
+import { BrandSetupChecklist } from './BrandSetupChecklist';
 
 type TypographySpec = NonNullable<Brand['typography']>['h1'];
 type TypoKey = 'h1' | 'h2' | 'h3' | 'body' | 'label' | 'caption';
 
-function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function Section({ title, children, defaultOpen = true, id }: { title: string; children: React.ReactNode; defaultOpen?: boolean; id?: string }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div id={id} className="border border-border rounded-lg overflow-hidden">
       <button
         className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/30 transition-colors text-sm font-medium text-left"
         onClick={() => setOpen((v) => !v)}
@@ -210,8 +211,15 @@ export function BrandDocsEditor() {
           </p>
         </div>
 
+        <BrandSetupChecklist
+          brand={brand}
+          onNavigate={(sectionId) => {
+            document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+        />
+
         {/* Brand Assets */}
-        <Section title="Brand Assets">
+        <Section title="Brand Assets" id="section-assets">
           <div className="divide-y divide-border -my-1">
             <LogoUploader
               label="Full Logo"
@@ -238,7 +246,7 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Colors */}
-        <Section title="Colors">
+        <Section title="Colors" id="section-colors">
           <div className="space-y-4">
             {/* Dynamic groups from colors/branding collection */}
             {colorGroups.map(([groupLabel, tokens]) => {
@@ -326,7 +334,7 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Typography */}
-        <Section title="Typography">
+        <Section title="Typography" id="section-typography">
           <div className="space-y-2">
             <div className="space-y-1">
               <Label className="text-xs">Font Family</Label>
@@ -374,7 +382,7 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Icons */}
-        <Section title="Icons" defaultOpen={false}>
+        <Section title="Icons" defaultOpen={false} id="section-icons">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground font-medium">Libraries by Platform</p>
@@ -415,7 +423,7 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Rounded */}
-        <Section title="Rounded Corners" defaultOpen={false}>
+        <Section title="Rounded Corners" defaultOpen={false} id="section-rounded">
           <KVTable
             data={brand.rounded ?? {}}
             onChange={(v) => save({ rounded: v })}
@@ -435,7 +443,7 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Shadows */}
-        <Section title="Shadows" defaultOpen={false}>
+        <Section title="Shadows" defaultOpen={false} id="section-shadows">
           <KVTable
             data={brand.shadow ?? {}}
             onChange={(v) => save({ shadow: v })}
@@ -455,7 +463,7 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Platforms & Screens */}
-        <Section title="Platforms & Screens" defaultOpen={false}>
+        <Section title="Platforms & Screens" defaultOpen={false} id="section-platforms">
           <PlatformsEditor
             platforms={brand.platforms ?? []}
             onAdd={(p) => addBrandPlatform(brand.id, p)}

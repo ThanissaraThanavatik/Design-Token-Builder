@@ -18,6 +18,8 @@ import { twSpaceCollection } from './tw-space';
 import { twStrokeWidthCollection } from './tw-stroke-width';
 import { iconSizesCollection } from './icon-sizes';
 import { iconColorsCollection } from './icon-colors';
+import { pageLayoutCollection } from './page-layout';
+import { LUCIDE_DEFAULT_ICONS } from './lucide-default-icons';
 
 function cloneCollection(c: Collection, idSuffix: string): Collection {
   return {
@@ -100,6 +102,7 @@ function makeJlekBranding(): Collection {
 }
 
 const jlekCollections: Collection[] = [
+  cloneCollection(pageLayoutCollection, 'j-lek'),
   makeJlekShadcn(),
   makeJlekBranding(),
   cloneCollection(primitivesCollection, 'j-lek'),
@@ -127,6 +130,7 @@ export const initialBrands: Brand[] = [
     slug: 'twelve-victory',
     assets: {},
     collections: [
+      pageLayoutCollection,
       shadcnCollection,
       brandingColorsCollection,
       primitivesCollection,
@@ -163,6 +167,7 @@ export const initialBrands: Brand[] = [
       button: '0 4px 14px 0 rgba(148, 35, 117, 0.3)',
     },
     motion: { 'scroll-reveal': '700ms', float: '6s infinite', hover: '200ms' },
+    icons: { approvedIcons: [{ library: 'Lucide Icons', names: LUCIDE_DEFAULT_ICONS }] },
     overview: '12victory is a magenta-forward brand with bold, modern aesthetics. Primary color is #942375.',
     createdAt: '2026-05-27T00:00:00.000Z',
     updatedAt: '2026-05-27T00:00:00.000Z',
@@ -198,6 +203,7 @@ export const initialBrands: Brand[] = [
       glow: '0 0 20px rgba(241, 89, 42, 0.5)',
     },
     motion: { 'scroll-reveal': '700ms', float: '6s infinite', hover: '200ms' },
+    icons: { approvedIcons: [{ library: 'Lucide Icons', names: LUCIDE_DEFAULT_ICONS }] },
     overview: 'J-lek is a warm, bold brand built around a vivid orange identity with deep maroon accents and a cream backdrop.',
     createdAt: '2026-05-27T00:00:00.000Z',
     updatedAt: '2026-05-27T00:00:00.000Z',

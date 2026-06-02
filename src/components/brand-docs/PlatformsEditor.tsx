@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, Pencil, Check, CheckCircle2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import type { BrandPlatform, ScreenBreakpoint, PlatformType } from '@/types/brand';
 import {
   PLATFORM_LABELS,
   PLATFORM_ICONS,
   makeDefaultPlatform,
-  makeRecommendedBreakpoints,
 } from '@/data/platform-defaults';
 
 const ALL_PLATFORM_TYPES: PlatformType[] = [
@@ -38,6 +38,23 @@ function parseNum(s: string): number | undefined {
   return isNaN(n) ? undefined : n;
 }
 
+const COL_HEADER = 'grid grid-cols-[90px_52px_52px_40px_56px_52px_24px] gap-1.5';
+
+function BreakpointDisplayRow({ bp }: { bp: ScreenBreakpoint }) {
+  const dash = (v?: number) => v !== undefined ? String(v) : '—';
+  return (
+    <div className={cn(COL_HEADER, 'items-center text-xs font-mono')}>
+      <span className="font-medium text-foreground">{bp.name}</span>
+      <span className="text-muted-foreground">{dash(bp.minWidth)}</span>
+      <span className="text-muted-foreground">{dash(bp.maxWidth)}</span>
+      <span className="text-muted-foreground">{dash(bp.columns)}</span>
+      <span className="text-foreground">{dash(bp.margin)}</span>
+      <span className="text-foreground">{dash(bp.gutter)}</span>
+      <span />
+    </div>
+  );
+}
+
 function BreakpointRow({
   bp,
   onUpdate,
@@ -48,7 +65,7 @@ function BreakpointRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="grid grid-cols-[90px_64px_64px_48px_56px_56px_auto] gap-1.5 items-center">
+    <div className={cn(COL_HEADER, 'items-center')}>
       <Input
         className="h-6 text-xs font-mono px-1.5"
         value={bp.name}
@@ -112,6 +129,8 @@ function PlatformCard({
   onUpdateBreakpoint: (bpId: string, patch: Partial<ScreenBreakpoint>) => void;
   onRemoveBreakpoint: (bpId: string) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+
   const icon = PLATFORM_ICONS[platform.type];
   const label = platform.label ?? PLATFORM_LABELS[platform.type];
 
@@ -125,30 +144,23 @@ function PlatformCard({
     });
   }
 
-  function loadRecommended() {
-    onUpdate({ breakpoints: makeRecommendedBreakpoints(platform.type) });
-  }
-
   return (
     <div className="border border-border rounded-lg overflow-hidden">
+      {/* Card header */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/30">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-base leading-none">{icon}</span>
-          <Input
-            className="h-6 text-xs font-medium bg-transparent border-transparent hover:border-border focus:border-border px-1.5 min-w-0 w-auto"
-            value={label}
-            onChange={(e) => onUpdate({ label: e.target.value })}
-          />
+          <span className="text-xs font-medium">{label}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-6 gap-1 text-xs text-muted-foreground hover:text-foreground px-2"
-            onClick={loadRecommended}
+            className="size-6"
+            title={isEditing ? 'Done editing' : 'Edit breakpoints'}
+            onClick={() => setIsEditing((v) => !v)}
           >
-            <RefreshCw className="size-3" />
-            Load recommended
+            {isEditing ? <Check className="size-3" /> : <Pencil className="size-3" />}
           </Button>
           <Button
             size="icon"
@@ -161,7 +173,9 @@ function PlatformCard({
         </div>
       </div>
 
+      {/* Card body */}
       <div className="px-3 py-2 space-y-2">
+        {/* Spacing base — always editable */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Spacing base:</span>
           <Input
@@ -172,9 +186,10 @@ function PlatformCard({
           <span className="text-xs text-muted-foreground">pt</span>
         </div>
 
+        {/* Breakpoint table */}
         {platform.breakpoints.length > 0 && (
           <div className="space-y-1">
-            <div className="grid grid-cols-[90px_64px_64px_48px_56px_56px_auto] gap-1.5 text-[10px] text-muted-foreground px-0.5">
+            <div className={cn(COL_HEADER, 'text-[10px] text-muted-foreground px-0.5')}>
               <span>Name</span>
               <span>Min px</span>
               <span>Max px</span>
@@ -183,26 +198,33 @@ function PlatformCard({
               <span>Gutter</span>
               <span />
             </div>
-            {platform.breakpoints.map((bp) => (
-              <BreakpointRow
-                key={bp.id}
-                bp={bp}
-                onUpdate={(patch) => onUpdateBreakpoint(bp.id, patch)}
-                onRemove={() => onRemoveBreakpoint(bp.id)}
-              />
-            ))}
+            {platform.breakpoints.map((bp) =>
+              isEditing ? (
+                <BreakpointRow
+                  key={bp.id}
+                  bp={bp}
+                  onUpdate={(patch) => onUpdateBreakpoint(bp.id, patch)}
+                  onRemove={() => onRemoveBreakpoint(bp.id)}
+                />
+              ) : (
+                <BreakpointDisplayRow key={bp.id} bp={bp} />
+              ),
+            )}
           </div>
         )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 text-xs h-6 mt-0.5"
-          onClick={addEmptyRow}
-        >
-          <Plus className="size-3" />
-          Add breakpoint
-        </Button>
+        {/* Add breakpoint — only in edit mode */}
+        {isEditing && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs h-6 mt-0.5"
+            onClick={addEmptyRow}
+          >
+            <Plus className="size-3" />
+            Add breakpoint
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -217,62 +239,63 @@ export function PlatformsEditor({
   onUpdateBreakpoint,
   onRemoveBreakpoint,
 }: Props) {
-  const [showTypeMenu, setShowTypeMenu] = useState(false);
-
   function addPlatform(type: PlatformType) {
     const defaults = makeDefaultPlatform(type);
     onAdd({
       id: Math.random().toString(36).slice(2),
       ...defaults,
     });
-    setShowTypeMenu(false);
   }
 
   return (
-    <div className="space-y-3">
-      {platforms.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          No platforms configured. Add a platform to specify screen breakpoints and spacing rules.
-        </p>
-      )}
-
-      {platforms.map((platform) => (
-        <PlatformCard
-          key={platform.id}
-          platform={platform}
-          onUpdate={(patch) => onUpdate(platform.id, patch)}
-          onRemove={() => onRemove(platform.id)}
-          onAddBreakpoint={(bp) => onAddBreakpoint(platform.id, bp)}
-          onUpdateBreakpoint={(bpId, patch) => onUpdateBreakpoint(platform.id, bpId, patch)}
-          onRemoveBreakpoint={(bpId) => onRemoveBreakpoint(platform.id, bpId)}
-        />
-      ))}
-
-      <div className="relative w-fit">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 text-xs h-7"
-          onClick={() => setShowTypeMenu((v) => !v)}
-        >
-          <Plus className="size-3.5" />
-          Add Platform
-        </Button>
-        {showTypeMenu && (
-          <div className="absolute left-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[160px]">
-            {ALL_PLATFORM_TYPES.map((type) => (
+    <div className="space-y-4">
+      {/* Platform type selector */}
+      <div className="space-y-1.5">
+        <p className="text-xs text-muted-foreground">Select the platforms you're designing for:</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_PLATFORM_TYPES.map((type) => {
+            const isAdded = platforms.some((p) => p.type === type);
+            return (
               <button
                 key={type}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/60 transition-colors text-left"
-                onClick={() => addPlatform(type)}
+                disabled={isAdded}
+                onClick={() => !isAdded && addPlatform(type)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors',
+                  isAdded
+                    ? 'bg-primary/10 border-primary/30 text-primary cursor-default'
+                    : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer',
+                )}
               >
                 <span>{PLATFORM_ICONS[type]}</span>
                 <span>{PLATFORM_LABELS[type]}</span>
+                {isAdded && <CheckCircle2 className="size-3" />}
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
+
+      {/* Platform cards */}
+      {platforms.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No platforms configured yet. Select one above to see its default screen spec.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {platforms.map((platform) => (
+            <PlatformCard
+              key={platform.id}
+              platform={platform}
+              onUpdate={(patch) => onUpdate(platform.id, patch)}
+              onRemove={() => onRemove(platform.id)}
+              onAddBreakpoint={(bp) => onAddBreakpoint(platform.id, bp)}
+              onUpdateBreakpoint={(bpId, patch) => onUpdateBreakpoint(platform.id, bpId, patch)}
+              onRemoveBreakpoint={(bpId) => onRemoveBreakpoint(platform.id, bpId)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
