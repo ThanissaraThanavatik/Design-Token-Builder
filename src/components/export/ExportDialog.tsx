@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Download, Copy, Check, X, RefreshCw } from 'lucide-react';
+import { Download, Copy, Check, X, RefreshCw, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { syncBrandsToStorybook } from '@/lib/storybook-sync';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,16 @@ export function ExportDialog() {
 
   if (!brand) return null;
 
+  function getMissingFields(): string[] {
+    const missing: string[] = [];
+    if (!brand!.typography?.fontFamily) missing.push('Typography');
+    if ((brand!.platforms ?? []).length === 0) missing.push('Platform & Screens');
+    return missing;
+  }
+
+  const missingFields = getMissingFields();
+  const isIncomplete = missingFields.length > 0;
+
   async function handleSync() {
     setSyncing(true);
     try {
@@ -55,10 +66,24 @@ export function ExportDialog() {
   }
 
   function handleDownload() {
+    if (isIncomplete) {
+      toast.error('Brand setup incomplete', {
+        description: `Missing: ${missingFields.join(', ')}. Complete setup in Brand Docs before exporting.`,
+        duration: 5000,
+      });
+      return;
+    }
     downloadExport(brand!, activeTab, orgFonts);
   }
 
   function handleDownloadAll() {
+    if (isIncomplete) {
+      toast.error('Brand setup incomplete', {
+        description: `Missing: ${missingFields.join(', ')}. Complete setup in Brand Docs before exporting.`,
+        duration: 5000,
+      });
+      return;
+    }
     for (const fmt of FORMATS) {
       const r = generateExport(brand!, fmt.id, orgFonts);
       downloadFile(r.filename, r.content, r.mimeType);
@@ -86,6 +111,16 @@ export function ExportDialog() {
             </div>
           </div>
         </DialogHeader>
+
+        {isIncomplete && (
+          <div className="flex items-start gap-2 px-6 py-3 bg-destructive/8 border-b border-destructive/20 text-destructive text-xs shrink-0">
+            <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+            <span>
+              <strong>Export unavailable</strong> — complete brand setup first: {missingFields.join(', ')}.
+              Open Brand Docs to configure the missing sections.
+            </span>
+          </div>
+        )}
 
         <div className="flex flex-col flex-1 min-h-0">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ExportFormat)} className="flex flex-col flex-1 min-h-0">

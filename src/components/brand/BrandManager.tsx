@@ -14,6 +14,7 @@ import {
   PLATFORM_ICONS,
   makeDefaultPlatform,
 } from '@/data/platform-defaults';
+import { FontPicker } from '@/components/brand-docs/FontPicker';
 
 interface BrandManagerProps {
   open: boolean;
@@ -39,6 +40,61 @@ const ALL_PLATFORM_TYPES: PlatformType[] = [
   'other',
 ];
 
+type RadiusPreset = 'flat' | 'rounded' | 'smooth' | 'pill' | 'custom';
+
+const DEFAULT_CUSTOM: Record<string, string> = {
+  sm: '4px', md: '6px', lg: '8px', xl: '12px', full: '9999px',
+};
+
+const RADIUS_PRESETS: Record<Exclude<RadiusPreset, 'custom'>, {
+  label: string;
+  description: string;
+  preview: string;
+  branded: Record<string, string>;
+  tokens: Record<string, string>;
+}> = {
+  flat: {
+    label: 'Flat',
+    description: 'Sharp corners — technical, precise',
+    preview: '2px',
+    branded: { sm: '2px', md: '4px', lg: '4px', xl: '6px', full: '9999px' },
+    tokens: {
+      none: '0px', xs: '1px', sm: '2px', md: '4px', lg: '4px',
+      xl: '6px', '2xl': '8px', '3xl': '8px', '4xl': '8px', full: '9999px',
+    },
+  },
+  rounded: {
+    label: 'Rounded',
+    description: 'Balanced corners — approachable, modern',
+    preview: '8px',
+    branded: { sm: '4px', md: '6px', lg: '8px', xl: '12px', full: '9999px' },
+    tokens: {
+      none: '0px', xs: '2px', sm: '4px', md: '6px', lg: '8px',
+      xl: '12px', '2xl': '16px', '3xl': '20px', '4xl': '24px', full: '9999px',
+    },
+  },
+  smooth: {
+    label: 'Smooth',
+    description: 'Generous corners — friendly, soft',
+    preview: '16px',
+    branded: { sm: '8px', md: '12px', lg: '16px', xl: '20px', full: '9999px' },
+    tokens: {
+      none: '0px', xs: '4px', sm: '8px', md: '12px', lg: '16px',
+      xl: '20px', '2xl': '24px', '3xl': '32px', '4xl': '40px', full: '9999px',
+    },
+  },
+  pill: {
+    label: 'Pill',
+    description: 'Very rounded — playful, bold',
+    preview: '24px',
+    branded: { sm: '16px', md: '24px', lg: '32px', xl: '40px', full: '9999px' },
+    tokens: {
+      none: '0px', xs: '8px', sm: '16px', md: '24px', lg: '32px',
+      xl: '40px', '2xl': '48px', '3xl': '56px', '4xl': '64px', full: '9999px',
+    },
+  },
+};
+
 export function BrandManager({ open, onClose }: BrandManagerProps) {
   const {
     brands, activeBrandId,
@@ -52,9 +108,12 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
   const [primaryHex, setPrimaryHex] = useState('#6200ee');
   const [hasSecondary, setHasSecondary] = useState(false);
   const [secondaryHex, setSecondaryHex] = useState('#03dac6');
-  const [mode, setMode] = useState<'list' | 'create'>('list');
-  const [step, setStep] = useState<1 | 2>(1);
+  const [fontFamily, setFontFamily] = useState('');
+  const [radiusPreset, setRadiusPreset] = useState<RadiusPreset | null>(null);
+  const [customBranded, setCustomBranded] = useState<Record<string, string>>(DEFAULT_CUSTOM);
   const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformType[]>([]);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [mode, setMode] = useState<'list' | 'create'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -66,8 +125,11 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
     setPrimaryHex('#6200ee');
     setHasSecondary(false);
     setSecondaryHex('#03dac6');
-    setStep(1);
+    setFontFamily('');
+    setRadiusPreset(null);
+    setCustomBranded(DEFAULT_CUSTOM);
     setSelectedPlatforms([]);
+    setStep(1);
   }
 
   function togglePlatform(type: PlatformType) {
@@ -138,6 +200,9 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
       }
     }
 
+    // Reset wizard-step fields so skipped steps are truly empty, not inherited from template
+    updateBrandMeta(id, { typography: { fontFamily: '' }, rounded: {}, platforms: [] });
+
     // Apply selected platform defaults
     selectedPlatforms.forEach((type) => {
       addBrandPlatform(id, {
@@ -145,6 +210,36 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
         ...makeDefaultPlatform(type),
       });
     });
+
+    // Save font family
+    if (fontFamily.trim()) {
+      const currentTypo = useBrandStore.getState().brands.find(b => b.id === id)?.typography ?? { fontFamily: '' };
+      updateBrandMeta(id, { typography: { ...currentTypo, fontFamily: fontFamily.trim() } });
+    }
+
+    // Save radius preset → brand.rounded metadata + tw-border-radius token collection
+    if (radiusPreset) {
+      const resolvedBranded =
+        radiusPreset === 'custom' ? customBranded : RADIUS_PRESETS[radiusPreset].branded;
+      const resolvedTokens =
+        radiusPreset === 'custom' ? customBranded : RADIUS_PRESETS[radiusPreset].tokens;
+
+      updateBrandMeta(id, { rounded: resolvedBranded });
+
+      const freshBrand = useBrandStore.getState().brands.find(b => b.id === id);
+      if (freshBrand) {
+        const radiusCol = freshBrand.collections.find(c => c.id.startsWith('tw-border-radius'));
+        if (radiusCol) {
+          const updatedTokens = radiusCol.tokens.map(t => {
+            const newVal = resolvedTokens[t.name];
+            return newVal ? { ...t, values: { default: { raw: newVal } } } : t;
+          });
+          updateBrandCollections(id, freshBrand.collections.map(c =>
+            c.id === radiusCol.id ? { ...c, tokens: updatedTokens } : c,
+          ));
+        }
+      }
+    }
 
     setActiveBrand(id);
     setPrimaryColorShade(id, '500');
@@ -224,22 +319,10 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                       <p className="text-xs text-muted-foreground">{brand.collections.length} collections</p>
                     </button>
                     <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        title="Rename brand"
-                        onClick={() => startRename(brand)}
-                      >
+                      <Button size="icon" variant="ghost" className="size-7" title="Rename brand" onClick={() => startRename(brand)}>
                         <Pencil className="size-3.5" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        title="Export JSON"
-                        onClick={() => exportBrandJSON(brand)}
-                      >
+                      <Button size="icon" variant="ghost" className="size-7" title="Export JSON" onClick={() => exportBrandJSON(brand)}>
                         <Upload className="size-3.5 rotate-180" />
                       </Button>
                       <Button
@@ -288,16 +371,23 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Step progress bar */}
+            {/* Step progress */}
             <div className="flex items-center gap-1.5">
-              <div className="h-1 flex-1 rounded-full bg-primary" />
-              <div className={cn('h-1 flex-1 rounded-full transition-colors', step === 2 ? 'bg-primary' : 'bg-muted')} />
-              <span className="text-[10px] text-muted-foreground ml-1">Step {step} of 2</span>
+              {[1, 2, 3, 4].map((n) => (
+                <div
+                  key={n}
+                  className={cn(
+                    'h-1 flex-1 rounded-full transition-colors',
+                    step >= n ? 'bg-primary' : 'bg-muted',
+                  )}
+                />
+              ))}
+              <span className="text-[10px] text-muted-foreground ml-1 shrink-0">Step {step} of 4</span>
             </div>
 
-            {step === 1 ? (
+            {/* Step 1 — Name + Colors */}
+            {step === 1 && (
               <>
-                {/* Brand Name */}
                 <div className="space-y-1.5">
                   <Label htmlFor="brand-name">Brand Name</Label>
                   <Input
@@ -312,7 +402,6 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                   />
                 </div>
 
-                {/* Primary Color */}
                 <div className="space-y-1.5">
                   <Label>
                     Primary Color <span className="text-destructive text-xs">required</span>
@@ -339,7 +428,7 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                       const entry = primaryScale.find((e) => e.step === s);
                       return (
                         <div key={s} className="flex-1 space-y-0.5">
-                          <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} title={`${s}: ${entry?.hex}`} />
+                          <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} />
                           <p className="text-[9px] text-muted-foreground text-center">{s}</p>
                         </div>
                       );
@@ -347,7 +436,6 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                   </div>
                 </div>
 
-                {/* Secondary Color (optional) */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                     <input
@@ -382,7 +470,7 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                           const entry = secondaryScale.find((e) => e.step === s);
                           return (
                             <div key={s} className="flex-1 space-y-0.5">
-                              <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} title={`${s}: ${entry?.hex}`} />
+                              <div className="h-6 rounded" style={{ backgroundColor: entry?.hex ?? '#888' }} />
                               <p className="text-[9px] text-muted-foreground text-center">{s}</p>
                             </div>
                           );
@@ -392,13 +480,8 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                   )}
                 </div>
 
-                {/* Step 1 actions */}
                 <div className="flex gap-2 pt-1">
-                  <Button
-                    variant="outline"
-                    onClick={() => { resetCreateForm(); setMode('list'); }}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={() => { resetCreateForm(); setMode('list'); }} className="flex-1">
                     Cancel
                   </Button>
                   <Button
@@ -406,58 +489,198 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                     className="flex-1"
                     disabled={!newBrandName.trim() || !isValidHex(primaryHex)}
                   >
-                    Next: Platform →
+                    Next: Typography →
                   </Button>
                 </div>
               </>
-            ) : (
-              <>
-                {/* Platform & Screens */}
-                <div className="space-y-2">
-                  <div>
-                    <Label>Platform & Screens</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Select the platforms you're designing for. Breakpoints load with recommended defaults — you can adjust them in Brand Docs.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {ALL_PLATFORM_TYPES.map((type) => {
-                      const selected = selectedPlatforms.includes(type);
-                      return (
-                        <button
-                          key={type}
-                          onClick={() => togglePlatform(type)}
-                          className={cn(
-                            'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-medium transition-colors',
-                            selected
-                              ? 'bg-primary/10 border-primary/30 text-primary'
-                              : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
-                          )}
-                        >
-                          <span>{PLATFORM_ICONS[type]}</span>
-                          <span>{PLATFORM_LABELS[type]}</span>
-                          {selected && <Check className="size-3" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {selectedPlatforms.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground">
-                      You can skip this and add platforms later in Brand Docs.
-                    </p>
-                  )}
+            )}
+
+            {/* Step 2 — Typography */}
+            {step === 2 && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Typography</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Choose your brand font. Refine the full type scale (H1 → caption) in Brand Docs.
+                  </p>
                 </div>
 
-                {/* Step 2 actions */}
+                <FontPicker value={fontFamily} onChange={setFontFamily} />
+
+                {fontFamily ? (
+                  <p
+                    className="text-sm text-muted-foreground px-1 leading-relaxed"
+                    style={{ fontFamily: `'${fontFamily}', sans-serif` }}
+                  >
+                    The quick brown fox jumps over the lazy dog.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    You can skip this and set typography later in Brand Docs.
+                  </p>
+                )}
+
                 <div className="flex gap-2 pt-1">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-                    ← Back
-                  </Button>
-                  <Button onClick={handleCreate} className="flex-1">
-                    Create Brand
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">← Back</Button>
+                  <Button
+                    variant={fontFamily ? 'default' : 'outline'}
+                    onClick={() => setStep(3)}
+                    className="flex-1"
+                  >
+                    {fontFamily ? 'Next: Radius →' : 'Skip →'}
                   </Button>
                 </div>
-              </>
+              </div>
+            )}
+
+            {/* Step 3 — Border Radius */}
+            {step === 3 && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Border Radius</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Sets your corner style across all components and applies values to the radius token scale.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.entries(RADIUS_PRESETS) as [Exclude<RadiusPreset, 'custom'>, typeof RADIUS_PRESETS[Exclude<RadiusPreset, 'custom'>]][]).map(([key, preset]) => (
+                    <button
+                      key={key}
+                      onClick={() => setRadiusPreset(radiusPreset === key ? null : key)}
+                      className={cn(
+                        'flex flex-col items-start gap-2 p-3 rounded-lg border text-left transition-colors',
+                        radiusPreset === key
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:bg-muted/50',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'w-8 h-8 border-2',
+                          radiusPreset === key ? 'bg-primary/20 border-primary/50' : 'bg-muted border-border',
+                        )}
+                        style={{ borderRadius: preset.preview }}
+                      />
+                      <div className="w-full">
+                        <p className={cn('text-xs font-medium', radiusPreset === key ? 'text-primary' : '')}>
+                          {preset.label}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">{preset.description}</p>
+                        <div className="grid grid-cols-5 gap-0.5 mt-2 pt-2 border-t border-border/40">
+                          {Object.entries(preset.branded).map(([k, v]) => (
+                            <div key={k} className="flex flex-col items-center gap-0.5">
+                              <span className="text-[8px] text-muted-foreground uppercase tracking-wide">{k}</span>
+                              <span className={cn('text-[9px] font-mono font-semibold', radiusPreset === key ? 'text-primary' : 'text-foreground')}>
+                                {v === '9999px' ? '∞' : v.replace('px', '')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom option — full width */}
+                <button
+                  onClick={() => setRadiusPreset(radiusPreset === 'custom' ? null : 'custom')}
+                  className={cn(
+                    'w-full flex flex-col gap-2 p-3 rounded-lg border text-left transition-colors',
+                    radiusPreset === 'custom'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-dashed border-border hover:bg-muted/50',
+                  )}
+                >
+                  <div>
+                    <p className={cn('text-xs font-medium', radiusPreset === 'custom' ? 'text-primary' : '')}>
+                      Custom
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Define exact pixel values for each size step.</p>
+                  </div>
+                  {radiusPreset === 'custom' && (
+                    <div
+                      className="grid grid-cols-5 gap-1.5 w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Object.keys(DEFAULT_CUSTOM).map((key) => (
+                        <div key={key} className="flex flex-col gap-1">
+                          <span className="text-[8px] text-muted-foreground uppercase tracking-wide text-center">{key}</span>
+                          <input
+                            type="text"
+                            value={customBranded[key] ?? ''}
+                            onChange={(e) => setCustomBranded((prev) => ({ ...prev, [key]: e.target.value }))}
+                            placeholder="8px"
+                            className="h-7 w-full rounded-md border border-input bg-background px-1.5 text-center text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </button>
+
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">← Back</Button>
+                  <Button
+                    variant={radiusPreset ? 'default' : 'outline'}
+                    onClick={() => setStep(4)}
+                    className="flex-1"
+                  >
+                    {radiusPreset ? 'Next: Platform →' : 'Skip →'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4 — Platform & Screens */}
+            {step === 4 && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Platform & Screens</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Select the platforms you're designing for. Breakpoints load with recommended defaults — adjust them in Brand Docs.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {ALL_PLATFORM_TYPES.map((type) => {
+                    const selected = selectedPlatforms.includes(type);
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => togglePlatform(type)}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-medium transition-colors',
+                          selected
+                            ? 'bg-primary/10 border-primary/30 text-primary'
+                            : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        <span>{PLATFORM_ICONS[type]}</span>
+                        <span>{PLATFORM_LABELS[type]}</span>
+                        {selected && <Check className="size-3" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedPlatforms.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    You can skip this and add platforms later in Brand Docs.
+                  </p>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">← Back</Button>
+                  <Button
+                    variant={selectedPlatforms.length > 0 ? 'default' : 'outline'}
+                    onClick={handleCreate}
+                    className="flex-1"
+                  >
+                    {selectedPlatforms.length > 0 ? 'Create Brand' : 'Skip & Create →'}
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         )}

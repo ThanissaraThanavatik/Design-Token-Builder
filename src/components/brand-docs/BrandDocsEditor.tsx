@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, Library } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, Library, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTokenStore } from '@/store/tokenStore';
 import type { Brand } from '@/types/brand';
 import type { Token } from '@/types/token';
+import { cn } from '@/lib/utils';
 import { FontPicker } from './FontPicker';
 import { FontLibraryManager } from './FontLibraryManager';
 import { LogoUploader } from './LogoUploader';
@@ -19,15 +20,25 @@ import { BrandSetupChecklist } from './BrandSetupChecklist';
 type TypographySpec = NonNullable<Brand['typography']>['h1'];
 type TypoKey = 'h1' | 'h2' | 'h3' | 'body' | 'label' | 'caption';
 
-function Section({ title, children, defaultOpen = true, id }: { title: string; children: React.ReactNode; defaultOpen?: boolean; id?: string }) {
+function Section({ title, children, defaultOpen = true, id, incomplete = false }: {
+  title: string; children: React.ReactNode; defaultOpen?: boolean; id?: string; incomplete?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div id={id} className="border border-border rounded-lg overflow-hidden">
+    <div id={id} className={cn('rounded-lg overflow-hidden border', incomplete ? 'border-amber-400/60' : 'border-border')}>
       <button
         className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/30 transition-colors text-sm font-medium text-left"
         onClick={() => setOpen((v) => !v)}
       >
-        {title}
+        <span className="flex items-center gap-2">
+          {title}
+          {incomplete && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full border border-amber-300/60">
+              <AlertTriangle className="size-2.5" />
+              Required
+            </span>
+          )}
+        </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
       </button>
       {open && <div className="px-4 pb-4 pt-3 space-y-3">{children}</div>}
@@ -159,6 +170,10 @@ export function BrandDocsEditor() {
   );
 
   if (!brand) return null;
+
+  const isTypographyEmpty = !brand.typography?.fontFamily;
+  const isRadiusEmpty = Object.keys(brand.rounded ?? {}).length === 0;
+  const isPlatformsEmpty = (brand.platforms ?? []).length === 0;
 
   const typo = brand.typography ?? { fontFamily: '' };
 
@@ -334,7 +349,13 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Typography */}
-        <Section title="Typography" id="section-typography">
+        <Section title="Typography" id="section-typography" incomplete={isTypographyEmpty}>
+          {isTypographyEmpty && (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/8 border border-destructive/20 text-destructive text-xs">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              Font family is required for typography tokens and DESIGN.md export.
+            </div>
+          )}
           <div className="space-y-2">
             <div className="space-y-1">
               <Label className="text-xs">Font Family</Label>
@@ -423,7 +444,13 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Rounded */}
-        <Section title="Rounded Corners" defaultOpen={false} id="section-rounded">
+        <Section title="Rounded Corners" defaultOpen={false} id="section-rounded" incomplete={isRadiusEmpty}>
+          {isRadiusEmpty && (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/8 border border-destructive/20 text-destructive text-xs">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              Border radius scale is empty — radius tokens will use default values until configured.
+            </div>
+          )}
           <KVTable
             data={brand.rounded ?? {}}
             onChange={(v) => save({ rounded: v })}
@@ -463,7 +490,13 @@ export function BrandDocsEditor() {
         </Section>
 
         {/* Platforms & Screens */}
-        <Section title="Platforms & Screens" defaultOpen={false} id="section-platforms">
+        <Section title="Platforms & Screens" defaultOpen={false} id="section-platforms" incomplete={isPlatformsEmpty}>
+          {isPlatformsEmpty && (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/8 border border-destructive/20 text-destructive text-xs">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              No platforms configured — required for responsive layout tokens and DESIGN.md export.
+            </div>
+          )}
           <PlatformsEditor
             platforms={brand.platforms ?? []}
             onAdd={(p) => addBrandPlatform(brand.id, p)}
