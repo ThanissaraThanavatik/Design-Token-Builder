@@ -1,13 +1,12 @@
-import { Layers, GitBranch, ShieldAlert, Eye, FileText, Library } from 'lucide-react';
+import { Layers, Eye, FileText, Library, Type } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ActivePanel } from '@/store/uiStore';
 
 const TABS: { id: ActivePanel; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
   { id: 'editor', label: 'Editor', icon: Layers },
-  { id: 'graph', label: 'Graph', icon: GitBranch },
-  { id: 'validation', label: 'Validation', icon: ShieldAlert },
-  { id: 'preview', label: 'Preview', icon: Eye },
   { id: 'docs', label: 'Brand Docs', icon: FileText, badge: 'WP' },
+  { id: 'typography', label: 'Typography', icon: Type },
+  { id: 'preview', label: 'Preview', icon: Eye },
   { id: 'icons', label: 'Icons', icon: Library },
 ];
 

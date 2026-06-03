@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, CornerDownRight } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,16 +16,26 @@ import { useBrandStore } from '@/store/brandStore';
 import { loadGoogleFonts } from '@/lib/google-fonts';
 import { cn } from '@/lib/utils';
 
-interface FontPickerProps {
-  value: string;
-  onChange: (family: string) => void;
+export interface FontTokenOption {
+  label: string;
+  cssVar: string;
+  previewFamily: string;
 }
 
-export function FontPicker({ value, onChange }: FontPickerProps) {
+interface FontPickerProps {
+  value: string;
+  onChange: (value: string) => void;
+  tokenOptions?: FontTokenOption[];
+}
+
+export function FontPicker({ value, onChange, tokenOptions = [] }: FontPickerProps) {
   const { orgFonts, addOrgFont } = useBrandStore();
   const [open, setOpen] = useState(false);
   const [addMode, setAddMode] = useState(false);
   const [newFamily, setNewFamily] = useState('');
+
+  const isRef = value.startsWith('var(--');
+  const refLabel = isRef ? value.replace(/^var\(/, '').replace(/\)$/, '') : null;
 
   function handleAddFont() {
     const family = newFamily.trim();
@@ -46,19 +56,28 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
           'h-7 w-full justify-between text-xs font-normal px-2',
         )}
       >
-        <span style={{ fontFamily: value ? `'${value}', sans-serif` : undefined }}>
-          {value || 'Select font…'}
-        </span>
+        {isRef ? (
+          <span className="flex items-center gap-1 font-mono text-muted-foreground">
+            <CornerDownRight className="size-3 shrink-0" />
+            {refLabel}
+          </span>
+        ) : (
+          <span style={{ fontFamily: value ? `'${value}', sans-serif` : undefined }}>
+            {value || 'Select font…'}
+          </span>
+        )}
         <ChevronsUpDown className="size-3 opacity-50 shrink-0 ml-1" />
       </PopoverTrigger>
-      <PopoverContent className="w-[240px] p-0" align="start">
+      <PopoverContent className="w-[260px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search fonts…" className="h-8 text-xs" />
           <CommandList>
             <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
               No fonts found
             </CommandEmpty>
-            <CommandGroup>
+
+            {/* Org library fonts */}
+            <CommandGroup heading="Library">
               {orgFonts.map((font) => (
                 <CommandItem
                   key={font.family}
@@ -72,7 +91,7 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
                   <Check
                     className={cn(
                       'size-3 shrink-0',
-                      value === font.family ? 'opacity-100' : 'opacity-0',
+                      !isRef && value === font.family ? 'opacity-100' : 'opacity-0',
                     )}
                   />
                   <span style={{ fontFamily: `'${font.family}', sans-serif` }}>
@@ -81,6 +100,46 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
                 </CommandItem>
               ))}
             </CommandGroup>
+
+            {/* Font Family tokens from collections */}
+            {tokenOptions.length > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="From Tokens">
+                  {tokenOptions.map((opt) => (
+                    <CommandItem
+                      key={opt.cssVar}
+                      value={opt.label}
+                      onSelect={() => {
+                        onChange(value === opt.cssVar ? '' : opt.cssVar);
+                        setOpen(false);
+                      }}
+                      className="text-xs gap-2"
+                    >
+                      <Check
+                        className={cn(
+                          'size-3 shrink-0',
+                          value === opt.cssVar ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className="block truncate"
+                          style={{ fontFamily: opt.previewFamily ? `'${opt.previewFamily}', sans-serif` : undefined }}
+                        >
+                          {opt.label}
+                        </span>
+                        <span className="block text-[10px] font-mono text-muted-foreground truncate">
+                          {opt.cssVar}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
+            {/* Add new font to library */}
             <CommandSeparator />
             <CommandGroup>
               {addMode ? (

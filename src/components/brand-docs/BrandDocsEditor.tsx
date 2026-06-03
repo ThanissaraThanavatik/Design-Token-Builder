@@ -11,7 +11,6 @@ import type { Brand } from '@/types/brand';
 import type { Token } from '@/types/token';
 import { cn } from '@/lib/utils';
 import { FontPicker } from './FontPicker';
-import { FontLibraryManager } from './FontLibraryManager';
 import { LogoUploader } from './LogoUploader';
 import { IconLibraryEditor } from './IconLibraryEditor';
 import { PlatformsEditor } from './PlatformsEditor';
@@ -343,11 +342,6 @@ export function BrandDocsEditor() {
           />
         </Section>
 
-        {/* Font Library */}
-        <Section title="Font Library">
-          <FontLibraryManager />
-        </Section>
-
         {/* Typography */}
         <Section title="Typography" id="section-typography" incomplete={isTypographyEmpty}>
           {isTypographyEmpty && (
@@ -358,7 +352,15 @@ export function BrandDocsEditor() {
           )}
           <div className="space-y-2">
             <div className="space-y-1">
-              <Label className="text-xs">Font Family</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Font Family</Label>
+                <button
+                  className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  onClick={() => setActivePanel('typography')}
+                >
+                  Manage in Typography panel →
+                </button>
+              </div>
               <FontPicker
                 value={typo.fontFamily}
                 onChange={(family) => save({ typography: { ...typo, fontFamily: family } })}

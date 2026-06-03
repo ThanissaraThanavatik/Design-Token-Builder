@@ -3,11 +3,10 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { PanelTabs } from './PanelTabs';
 import { TokenEditor } from '@/components/token-editor/TokenEditor';
-import { DependencyGraph } from '@/components/dependency-graph/DependencyGraph';
-import { ValidationPanel } from '@/components/validation/ValidationPanel';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 import { BrandDocsEditor } from '@/components/brand-docs/BrandDocsEditor';
 import { IconBrowserPanel } from '@/components/icons/IconBrowserPanel';
+import { TypographyPanel } from '@/components/typography/TypographyPanel';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { BrandManager } from '@/components/brand/BrandManager';
 import { Toaster } from '@/components/ui/sonner';
@@ -63,11 +62,10 @@ export function AppShell() {
           <PanelTabs />
           <div className="flex-1 min-h-0 overflow-hidden">
             {activePanel === 'editor' && <TokenEditor />}
-            {activePanel === 'graph' && <DependencyGraph />}
-            {activePanel === 'validation' && <ValidationPanel />}
             {activePanel === 'preview' && <PreviewPanel />}
             {activePanel === 'docs' && <BrandDocsEditor />}
             {activePanel === 'icons' && <IconBrowserPanel />}
+            {activePanel === 'typography' && <TypographyPanel />}
           </div>
         </div>
       </div>

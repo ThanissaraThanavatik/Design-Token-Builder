@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { FontPicker } from '@/components/brand-docs/FontPicker';
+import type { FontTokenOption } from '@/components/brand-docs/FontPicker';
 import { extractFontFamily, extractFallback, formatFontFamily } from '@/lib/google-fonts';
 import { cn, isColorValue } from '@/lib/utils';
 import type { Token, TokenMode } from '@/types/token';
 import { useTokenStore } from '@/store/tokenStore';
+import { useBrandStore } from '@/store/brandStore';
 
 interface TokenValueCellProps {
   token: Token;
@@ -16,6 +18,7 @@ interface TokenValueCellProps {
 
 export function TokenValueCell({ token, collectionId, mode, className }: TokenValueCellProps) {
   const { updateTokenValue } = useTokenStore();
+  const { brands, activeBrandId } = useBrandStore();
   const val = token.values[mode];
   const rawValue = val?.raw ?? '';
   const [editing, setEditing] = useState(false);
@@ -24,6 +27,21 @@ export function TokenValueCell({ token, collectionId, mode, className }: TokenVa
   const isColor = token.type === 'color' || isColorValue(rawValue);
   const isRef = rawValue.startsWith('var(--');
   const isFontFamily = token.type === 'string' && token.group === 'Font Family';
+
+  // Collect font-family tokens from the active brand for token-to-token references
+  const fontTokenOptions: FontTokenOption[] = isFontFamily
+    ? (brands.find((b) => b.id === activeBrandId)?.collections ?? [])
+        .flatMap((col) => col.tokens)
+        .filter((t) => t.group === 'Font Family' && t.id !== token.id)
+        .map((t) => {
+          const firstVal = Object.values(t.values)[0]?.raw ?? '';
+          return {
+            label: t.name,
+            cssVar: `var(${t.cssVariable})`,
+            previewFamily: extractFontFamily(firstVal),
+          };
+        })
+    : [];
 
   function commitEdit() {
     if (draft !== rawValue) {
@@ -40,6 +58,11 @@ export function TokenValueCell({ token, collectionId, mode, className }: TokenVa
     );
   }
 
+  // Derive the value to pass to FontPicker (plain name or var reference)
+  const fontPickerValue = isFontFamily
+    ? (isRef ? rawValue : extractFontFamily(rawValue))
+    : '';
+
   return (
     <div className={cn('flex items-center gap-2 min-w-0', className)}>
       {isColor && !isRef && (
@@ -48,18 +71,25 @@ export function TokenValueCell({ token, collectionId, mode, className }: TokenVa
           onChange={(hex) => updateTokenValue(collectionId, token.id, mode, hex)}
         />
       )}
-      {isRef && (
+      {isRef && !isFontFamily && (
         <span className="size-6 rounded border border-dashed border-border shrink-0 flex items-center justify-center text-xs text-muted-foreground">
           ↗
         </span>
       )}
-      {isFontFamily && !isRef ? (
+      {isFontFamily ? (
         <FontPicker
-          value={extractFontFamily(rawValue)}
-          onChange={(family) => {
-            if (!family) return;
-            const fallback = extractFallback(rawValue);
-            updateTokenValue(collectionId, token.id, mode, formatFontFamily(family, fallback));
+          value={fontPickerValue}
+          tokenOptions={fontTokenOptions}
+          onChange={(picked) => {
+            if (!picked) return;
+            if (picked.startsWith('var(--')) {
+              // Token reference — store as-is
+              updateTokenValue(collectionId, token.id, mode, picked);
+            } else {
+              // Direct font name — preserve the generic fallback
+              const fallback = isRef ? 'sans-serif' : extractFallback(rawValue);
+              updateTokenValue(collectionId, token.id, mode, formatFontFamily(picked, fallback));
+            }
           }}
         />
       ) : editing ? (

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ActivePanel = 'editor' | 'graph' | 'validation' | 'preview' | 'docs' | 'icons';
+export type ActivePanel = 'editor' | 'preview' | 'docs' | 'icons' | 'typography';
 export type AppTheme = 'light' | 'dark' | 'system';
 
 interface UIStore {
