@@ -225,12 +225,14 @@ export function BrandDocsEditor() {
           </p>
         </div>
 
-        <BrandSetupChecklist
-          brand={brand}
-          onNavigate={(sectionId) => {
-            document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-        />
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Setup Checklist</p>
+          <BrandSetupChecklist
+            onNavigate={(sectionId) => {
+              document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          />
+        </div>
 
         {/* Brand Assets */}
         <Section title="Brand Assets" id="section-assets">

@@ -13,8 +13,12 @@ import {
   PLATFORM_LABELS,
   PLATFORM_ICONS,
   makeDefaultPlatform,
+  DEFAULT_BREAKPOINTS,
 } from '@/data/platform-defaults';
 import { FontPicker } from '@/components/brand-docs/FontPicker';
+
+const PANGRAM_LATIN = 'The quick brown fox jumps over the lazy dog';
+const PANGRAM_THAI  = 'ฟักทองใหญ่วางบนถาดไม้ — เส้นทางแห่งความสำเร็จ';
 
 interface BrandManagerProps {
   open: boolean;
@@ -23,6 +27,13 @@ interface BrandManagerProps {
 
 function toSlug(name: string): string {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+function formatWidth(min?: number, max?: number): string {
+  if (min !== undefined && max !== undefined) return `${min}–${max}`;
+  if (min !== undefined) return `≥ ${min}`;
+  if (max !== undefined) return `≤ ${max}`;
+  return '—';
 }
 
 function isValidHex(hex: string): boolean {
@@ -508,12 +519,14 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                 <FontPicker value={fontFamily} onChange={setFontFamily} />
 
                 {fontFamily ? (
-                  <p
-                    className="text-sm text-muted-foreground px-1 leading-relaxed"
+                  <div
+                    className="rounded-lg border border-border bg-muted/30 px-3 py-3 space-y-1.5"
                     style={{ fontFamily: `'${fontFamily}', sans-serif` }}
                   >
-                    The quick brown fox jumps over the lazy dog.
-                  </p>
+                    <p className="text-3xl font-medium leading-none tracking-tight">Aa</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{PANGRAM_LATIN}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{PANGRAM_THAI}</p>
+                  </div>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">
                     You can skip this and set typography later in Brand Docs.
@@ -663,6 +676,41 @@ export function BrandManager({ open, onClose }: BrandManagerProps) {
                     );
                   })}
                 </div>
+
+                {selectedPlatforms.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
+                    {selectedPlatforms.map((type) => (
+                      <div key={type}>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 border-b border-border sticky top-0">
+                          <span className="text-xs">{PLATFORM_ICONS[type]}</span>
+                          <span className="text-xs font-medium">{PLATFORM_LABELS[type]}</span>
+                        </div>
+                        <table className="w-full text-[10px] font-mono">
+                          <thead>
+                            <tr className="text-muted-foreground border-b border-border/60">
+                              <th className="text-left px-3 py-1 font-medium">Name</th>
+                              <th className="text-right px-2 py-1 font-medium">Width (px)</th>
+                              <th className="text-right px-2 py-1 font-medium">Cols</th>
+                              <th className="text-right px-2 py-1 font-medium">Margin</th>
+                              <th className="text-right px-3 py-1 font-medium">Gutter</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {DEFAULT_BREAKPOINTS[type].map((bp, i) => (
+                              <tr key={i} className="border-b border-border/40 last:border-0">
+                                <td className="px-3 py-1 font-sans font-medium text-foreground">{bp.name}</td>
+                                <td className="px-2 py-1 text-right text-muted-foreground">{formatWidth(bp.minWidth, bp.maxWidth)}</td>
+                                <td className="px-2 py-1 text-right text-muted-foreground">{bp.columns ?? '—'}</td>
+                                <td className="px-2 py-1 text-right text-muted-foreground">{bp.margin ?? '—'}</td>
+                                <td className="px-3 py-1 text-right text-muted-foreground">{bp.gutter ?? '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {selectedPlatforms.length === 0 && (
                   <p className="text-[11px] text-muted-foreground">

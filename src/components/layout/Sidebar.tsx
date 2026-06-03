@@ -5,6 +5,7 @@ import { useUIStore } from '@/store/uiStore';
 import { ChevronRight, Plus, MoreHorizontal, Pencil, Trash2, Check, X } from 'lucide-react';
 import type { Collection } from '@/types/token';
 import { useState } from 'react';
+import { countIncompleteRequired, getBrandPrimaryColor } from '@/lib/brand-setup-steps';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,14 +28,6 @@ function sortCollections(collections: Collection[]) {
   });
 }
 
-function getBrandPrimaryColor(collections: Collection[]): string {
-  for (const col of collections) {
-    const t = col.tokens.find((t) => t.cssVariable === '--color-primary');
-    const val = t?.values['light']?.raw ?? t?.values['default']?.raw;
-    if (val && val.startsWith('#')) return val;
-  }
-  return '#888888';
-}
 
 function toSlug(name: string) {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -128,7 +121,12 @@ export function Sidebar() {
                       )}
                     >
                       <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: brandColor }} />
-                      <span className="truncate">{b.name}</span>
+                      <span className="truncate flex-1">{b.name}</span>
+                      {countIncompleteRequired(b) > 0 && (
+                        <span className="text-[10px] font-medium text-amber-500 bg-amber-50 dark:bg-amber-950/30 px-1 rounded shrink-0">
+                          {countIncompleteRequired(b)}
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setOpenMenuId(menuOpen ? null : b.id); }}
