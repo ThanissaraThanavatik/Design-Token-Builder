@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import type { User } from '@/types/user';
 import { PanelTabs } from './PanelTabs';
 import { TokenEditor } from '@/components/token-editor/TokenEditor';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
@@ -16,7 +17,12 @@ import { useBrandStore } from '@/store/brandStore';
 import { loadGoogleFonts } from '@/lib/google-fonts';
 import { cn } from '@/lib/utils';
 
-export function AppShell() {
+interface AppShellProps {
+  user: User;
+  onSignOut: () => void;
+}
+
+export function AppShell({ user, onSignOut }: AppShellProps) {
   const { activePanel, appTheme, brandManagerOpen, setBrandManagerOpen } = useUIStore();
   const { undo, redo } = useTokenStore();
   const { orgFonts } = useBrandStore();
@@ -55,7 +61,7 @@ export function AppShell() {
 
   return (
     <div className={cn('flex flex-col h-screen bg-background text-foreground overflow-hidden')}>
-      <TopBar />
+      <TopBar user={user} onSignOut={onSignOut} />
       <div className="flex flex-1 min-h-0">
         <Sidebar />
         <div className="flex flex-col flex-1 min-w-0">
