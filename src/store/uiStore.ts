@@ -34,7 +34,13 @@ export const useUIStore = create<UIStore>((set) => ({
   brandManagerOpen: false,
 
   setActivePanel: (panel) => set({ activePanel: panel }),
-  setAppTheme: (theme) => set({ appTheme: theme }),
+  setAppTheme: (theme) => {
+    const previewMode =
+      theme === 'dark' ? 'dark'
+      : theme === 'light' ? 'light'
+      : (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    set({ appTheme: theme, previewMode });
+  },
   setPreviewMode: (mode) => set({ previewMode: mode }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setGraphHighlight: (tokenId) => set({ graphHighlightedTokenId: tokenId }),

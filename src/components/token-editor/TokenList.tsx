@@ -153,12 +153,12 @@ const BREAKPOINT_MIN_LABEL: Record<BreakpointMode, string> = {
 };
 
 export function TokenList({ collection }: TokenListProps) {
-  const { searchQuery } = useUIStore();
+  const { searchQuery, previewMode, setPreviewMode } = useUIStore();
   const parentRef = useRef<HTMLDivElement>(null);
-  const [showDark, setShowDark] = useState(false);
   const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointMode | null>(null);
 
   const hasDarkMode = collection.modes.includes('dark');
+  const showDark = hasDarkMode && previewMode === 'dark';
   const hasBreakpoints = collection.modes.some(isBreakpointMode);
   const tokenMode: 'light' | 'default' = hasDarkMode ? 'light' : 'default';
 
@@ -202,7 +202,7 @@ export function TokenList({ collection }: TokenListProps) {
       <CollectionHeader
         collection={collection}
         showDark={showDark}
-        onToggleDark={() => setShowDark((v) => !v)}
+        onToggleDark={() => setPreviewMode(previewMode === 'dark' ? 'light' : 'dark')}
         activeBreakpoint={activeBreakpoint}
         onBreakpointChange={setActiveBreakpoint}
       />
