@@ -118,15 +118,22 @@ export function CollectionHeader({ collection, showDark, onToggleDark, activeBre
           )}
         </div>
 
-        {hasDarkMode && (
-          <button
-            onClick={onToggleDark}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted transition-colors shrink-0"
-          >
-            {showDark ? <Moon className="size-3" /> : <Sun className="size-3" />}
-            {showDark ? 'Dark' : 'Light'}
-          </button>
-        )}
+        <button
+          onClick={hasDarkMode ? onToggleDark : undefined}
+          disabled={!hasDarkMode}
+          title={!hasDarkMode ? 'No dark values — using default' : undefined}
+          className={cn(
+            'flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors shrink-0',
+            hasDarkMode && showDark
+              ? 'border-primary/50 text-primary bg-primary/10 hover:bg-primary/20'
+              : hasDarkMode
+                ? 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                : 'border-border/40 text-muted-foreground/40 cursor-not-allowed',
+          )}
+        >
+          {showDark ? <Moon className="size-3" /> : <Sun className="size-3" />}
+          {showDark ? 'Dark' : 'Light'}
+        </button>
 
         <button
           onClick={toggleResponsive}

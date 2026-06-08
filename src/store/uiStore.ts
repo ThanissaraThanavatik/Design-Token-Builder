@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type ActivePanel = 'editor' | 'preview' | 'docs' | 'icons' | 'typography';
 export type AppTheme = 'light' | 'dark' | 'system';
@@ -23,28 +24,40 @@ interface UIStore {
   setBrandManagerOpen: (open: boolean) => void;
 }
 
-export const useUIStore = create<UIStore>((set) => ({
-  activePanel: 'editor',
-  appTheme: 'system',
-  previewMode: 'light',
-  sidebarCollapsed: false,
-  graphHighlightedTokenId: null,
-  searchQuery: '',
-  filterType: 'all',
-  brandManagerOpen: false,
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set) => ({
+      activePanel: 'editor',
+      appTheme: 'system',
+      previewMode: 'light',
+      sidebarCollapsed: false,
+      graphHighlightedTokenId: null,
+      searchQuery: '',
+      filterType: 'all',
+      brandManagerOpen: false,
 
-  setActivePanel: (panel) => set({ activePanel: panel }),
-  setAppTheme: (theme) => {
-    const previewMode =
-      theme === 'dark' ? 'dark'
-      : theme === 'light' ? 'light'
-      : (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    set({ appTheme: theme, previewMode });
-  },
-  setPreviewMode: (mode) => set({ previewMode: mode }),
-  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
-  setGraphHighlight: (tokenId) => set({ graphHighlightedTokenId: tokenId }),
-  setSearchQuery: (q) => set({ searchQuery: q }),
-  setFilterType: (type) => set({ filterType: type }),
-  setBrandManagerOpen: (open) => set({ brandManagerOpen: open }),
-}));
+      setActivePanel: (panel) => set({ activePanel: panel }),
+      setAppTheme: (theme) => {
+        const previewMode =
+          theme === 'dark' ? 'dark'
+          : theme === 'light' ? 'light'
+          : (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        set({ appTheme: theme, previewMode });
+      },
+      setPreviewMode: (mode) => set({ previewMode: mode }),
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      setGraphHighlight: (tokenId) => set({ graphHighlightedTokenId: tokenId }),
+      setSearchQuery: (q) => set({ searchQuery: q }),
+      setFilterType: (type) => set({ filterType: type }),
+      setBrandManagerOpen: (open) => set({ brandManagerOpen: open }),
+    }),
+    {
+      name: 'dtb-ui-prefs',
+      version: 1,
+      partialize: (state) => ({
+        appTheme: state.appTheme,
+        previewMode: state.previewMode,
+      }),
+    },
+  ),
+);

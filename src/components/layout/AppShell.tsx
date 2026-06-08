@@ -43,6 +43,17 @@ export function AppShell({ user, onSignOut }: AppShellProps) {
     }
   }, [appTheme]);
 
+  // Keep previewMode in sync with the OS when appTheme='system',
+  // correcting any stale persisted value and reacting to live OS changes.
+  useEffect(() => {
+    if (appTheme !== 'system') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const sync = () => useUIStore.getState().setPreviewMode(mq.matches ? 'dark' : 'light');
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [appTheme]);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
